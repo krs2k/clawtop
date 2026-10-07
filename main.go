@@ -35,11 +35,12 @@ type diskInfo struct {
 }
 
 type sysMsg struct {
-	cpu   []float64
-	mem   *mem.VirtualMemoryStat
-	swap  *mem.SwapMemoryStat
-	disks []diskInfo
-	load  *load.AvgStat
+	cpu    []float64
+	mem    *mem.VirtualMemoryStat
+	swap   *mem.SwapMemoryStat
+	disks  []diskInfo
+	load   *load.AvgStat
+	agents agentCounts
 }
 
 type tickSys struct{}
@@ -59,6 +60,7 @@ func collectSys() tea.Msg {
 	m.mem, _ = mem.VirtualMemory()
 	m.swap, _ = mem.SwapMemory()
 	m.load, _ = load.Avg()
+	m.agents = countAgents()
 	parts, _ := disk.Partitions(false)
 	seen := map[string]bool{}
 	for _, p := range parts {
@@ -272,6 +274,9 @@ func (m model) View() string {
 	var st []string
 	if l := m.sys.load; l != nil {
 		st = append(st, fmt.Sprintf("load %.2f %.2f %.2f", l.Load1, l.Load5, l.Load15))
+	}
+	if a := m.sys.agents; a.busy+a.waiting+a.idle > 0 {
+		st = append(st, fmt.Sprintf("agenci: %d pracuje · %d czeka · %d idle", a.busy, a.waiting, a.idle))
 	}
 	switch {
 	case m.claude.err != nil:
